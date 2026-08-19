@@ -29,9 +29,16 @@ export function ProfileDialog({ user, onClose }: { user: PublicUser | null; onCl
         <div className="space-y-4">
           <div
             className="h-24 rounded-[var(--radius-md)] bg-cover bg-center"
+            /*
+              `backgroundColor` em vez do atalho `background`: limpar o atalho
+              (`style.background = ''`) reseta o backgroundImage junto — ver o
+              comentário em settings/ImageUpload.tsx. A cor fica sempre por
+              baixo, então um banner que falhe em carregar degrada para a cor
+              de destaque em vez de um retângulo vazio.
+            */
             style={{
               backgroundImage: user.banner ? `url('${assetUrl(user.banner)}')` : undefined,
-              background: user.banner ? undefined : user.accent || user.color,
+              backgroundColor: user.accent || user.color,
             }}
           />
 

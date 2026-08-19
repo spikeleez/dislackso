@@ -42,9 +42,17 @@ export function ImageUpload({ kind, current, label, fallbackColor, fallbackText,
           'grid place-items-center overflow-hidden bg-cover bg-center text-[11px] text-white/80',
           wide ? 'h-24 w-full rounded-[var(--radius-md)]' : 'size-20 rounded-full',
         )}
+        /*
+          `backgroundColor`, nunca o atalho `background`: o React limpa uma
+          propriedade que sai do objeto atribuindo string vazia, e
+          `style.background = ''` reseta TODAS as sub-propriedades — inclusive
+          o backgroundImage recém-definido na mesma atualização. Era por isso
+          que enviar uma foto nova "funcionava" mas a prévia daqui ficava em
+          branco.
+        */
         style={{
           backgroundImage: current ? `url('${assetUrl(current)}')` : undefined,
-          background: current ? undefined : fallbackColor,
+          backgroundColor: current ? undefined : fallbackColor,
         }}
       >
         {!current && fallbackText}
