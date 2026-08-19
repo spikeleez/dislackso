@@ -41,6 +41,14 @@ export interface SettingsValues {
   autoGainControl: boolean;
   micMode: 'voz' | 'ptt';
   duckVoiceOnShare: string | boolean;
+  /**
+   * Mudo e ensurdecido são escolhas que PERSISTEM entre chamadas: os botões
+   * ficam fixos no cartão da conta, valem fora de sala, e entrar numa call
+   * respeita como eles estavam — quem saiu mutado entra mutado, quem estava
+   * pra falar entra falando.
+   */
+  micMuted: boolean;
+  soundOff: boolean;
   // atalhos
   muteKey: string;
   screenKey: string;
@@ -62,7 +70,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
   quality: '1080p60', contentHint: 'motion', autoFocus: true, selfPreview: true, shareSystemAudio: true,
   micId: '', speakerId: '', micGain: 1, rnnoise: true,
   echoCancellation: true, noiseSuppression: true, autoGainControl: true,
-  micMode: 'voz', duckVoiceOnShare: 'duck25',
+  micMode: 'voz', duckVoiceOnShare: 'duck25', micMuted: false, soundOff: false,
   muteKey: 'KeyM', screenKey: 'KeyS', pttKey: 'Space', annotKey: 'KeyP',
   autoUpdate: true, feedbackSounds: true,
   annotAllow: true, annotFade: 8, annotColor: '#ff3b5c', annotSize: 4,

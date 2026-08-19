@@ -7,28 +7,35 @@ import { StatsDialog } from '@/components/overlays/StatsDialog';
 import { voice } from '@/lib/rtc/engine';
 import { cn } from '@/lib/cn';
 import { useRoom } from '@/stores/room';
+import { useSettings } from '@/stores/settings';
 import { toast } from '@/stores/toasts';
 import { leaveVoice, toggleScreen } from '@/features/voice/actions';
 
 interface CallBarProps {
+  /** `false` = fora de sala: só mudo e ensurdecer, ajustando a preferência salva. */
+  inRoom: boolean;
   onOpenSettings(section: string): void;
 }
 
 /**
- * Os controles da chamada, só em ícone — vivem junto do cartão da própria
- * conta, e não mais flutuando sobre o palco.
+ * Os controles de voz, só em ícone — vivem junto do cartão da própria conta.
  *
- * Ficar aqui (e não em `Stage`) é o que faz mudo, ensurdecer e sair
- * continuarem alcançáveis mesmo com um canal de texto aberto por cima da
- * sala de voz, onde o palco não é a tela visível.
+ * Mudo e ensurdecer ficam FIXOS aqui, dentro e fora de chamada: são
+ * preferências que persistem (ver `micMuted`/`soundOff` em stores/settings), e
+ * entrar numa sala respeita como eles estavam. Os demais controles
+ * (transmitir, qualidade, status, sair) só existem com uma chamada de pé.
  */
-export function CallBar({ onOpenSettings }: CallBarProps) {
+export function CallBar({ inRoom, onOpenSettings }: CallBarProps) {
   useRoom((s) => s.tick);
+  const micMutedPref = useSettings((s) => s.micMuted);
+  const soundOffPref = useSettings((s) => s.soundOff);
   const [stats, setStats] = useState(false);
 
-  const micOpen = voice.mic.isOpen();
+  // Em sala o motor é a verdade (cobre apertar-para-falar e mic indisponível);
+  // fora dela, a preferência salva.
+  const micOpen = inRoom ? voice.mic.isOpen() : !micMutedPref;
+  const deafened = inRoom ? voice.deafened : soundOffPref;
   const sharing = voice.screen.active;
-  const deafened = voice.deafened;
 
   return (
     <div className="flex items-center justify-center gap-0.5 border-t border-line px-1 pt-1.5 pb-0.5">
@@ -53,29 +60,33 @@ export function CallBar({ onOpenSettings }: CallBarProps) {
         {deafened ? <EarOff size={17} /> : <Ear size={17} />}
       </IconButton>
 
-      <IconButton
-        label={sharing ? 'Parar de transmitir (S)' : 'Compartilhar tela (S)'}
-        active={sharing}
-        onClick={toggleScreen}
-      >
-        {sharing ? <MonitorOff size={17} /> : <MonitorUp size={17} />}
-      </IconButton>
+      {inRoom && (
+        <>
+          <IconButton
+            label={sharing ? 'Parar de transmitir (S)' : 'Compartilhar tela (S)'}
+            active={sharing}
+            onClick={toggleScreen}
+          >
+            {sharing ? <MonitorOff size={17} /> : <MonitorUp size={17} />}
+          </IconButton>
 
-      <IconButton label={`Qualidade: ${voice.quality.preset.label}`} onClick={() => onOpenSettings('transmissao')}>
-        <SlidersHorizontal size={17} />
-      </IconButton>
+          <IconButton label={`Qualidade: ${voice.quality.preset.label}`} onClick={() => onOpenSettings('transmissao')}>
+            <SlidersHorizontal size={17} />
+          </IconButton>
 
-      <IconButton label="Status da conexão" onClick={() => setStats(true)}>
-        <Activity size={17} />
-      </IconButton>
+          <IconButton label="Status da conexão" onClick={() => setStats(true)}>
+            <Activity size={17} />
+          </IconButton>
 
-      <IconButton
-        label="Sair da sala"
-        onClick={() => void leaveVoice()}
-        className={cn('text-red', 'hover:bg-red hover:text-white')}
-      >
-        <LogOut size={17} />
-      </IconButton>
+          <IconButton
+            label="Sair da sala"
+            onClick={() => void leaveVoice()}
+            className={cn('text-red', 'hover:bg-red hover:text-white')}
+          >
+            <LogOut size={17} />
+          </IconButton>
+        </>
+      )}
 
       <StatsDialog open={stats} onClose={() => setStats(false)} />
     </div>

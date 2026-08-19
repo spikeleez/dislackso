@@ -2,7 +2,7 @@ import { Emitter } from '@/lib/emitter';
 import type { VoiceEvents } from './events';
 import { feedback } from '@/lib/feedback';
 import { tell } from '@/lib/socket/client';
-import { settings } from '@/stores/settings';
+import { settings, useSettings } from '@/stores/settings';
 import { MicGraph } from './mic';
 import { PeerMesh } from './mesh';
 import type { Peer } from './peer';
@@ -104,25 +104,53 @@ export class VoiceEngine extends Emitter<VoiceEvents> {
 
   /* ------------------------------------------------------- microfone --- */
 
-  /** Alterna o microfone. Fica aqui, e não em `mic`, por causa do som de aviso. */
+  /**
+   * Alterna o microfone. Fica aqui, e não em `mic`, por causa do som de aviso
+   * e da persistência: mudo é uma escolha que sobrevive à chamada (e funciona
+   * até fora dela) — a próxima call começa exatamente como esta terminou.
+   */
   toggleMic(): boolean {
+    const prefs = useSettings.getState();
+
+    if (!this.inRoom) {
+      // Fora de sala não há faixa nenhuma: o botão só troca a intenção salva.
+      const open = prefs.micMuted; // estava mudo → vai abrir
+      prefs.set('micMuted', !open);
+      if (open) {
+        this.deafened = false;
+        prefs.set('soundOff', false); // abrir o mic sai do ensurdecido sozinho
+      }
+      feedback(open ? 'unmute' : 'mute');
+      this.emit('localchange', undefined);
+      return open;
+    }
+
     const wasMuted = !this.mic.enabled;
     const next = this.mic.toggle();
     if (next === null) {
       this.emit('notice', 'Nenhum microfone disponível.');
       return false;
     }
-    if (next && wasMuted) this.deafened = false; // abrir o mic sai do ensurdecido sozinho
+    prefs.set('micMuted', !next);
+    if (next && wasMuted) {
+      this.deafened = false; // abrir o mic sai do ensurdecido sozinho
+      prefs.set('soundOff', false);
+    }
     feedback(next ? 'unmute' : 'mute');
     return next;
   }
 
-  /** Ensurdece: para de ouvir todo mundo e muta o próprio microfone junto. */
+  /** Ensurdece: para de ouvir todo mundo e muta o próprio microfone junto. Persiste. */
   toggleDeafen(): boolean {
+    const prefs = useSettings.getState();
     this.deafened = !this.deafened;
-    if (this.deafened && this.mic.enabled) {
-      this.mic.enabled = false;
-      this.mic.sync();
+    prefs.set('soundOff', this.deafened);
+    if (this.deafened) {
+      prefs.set('micMuted', true);
+      if (this.mic.enabled) {
+        this.mic.enabled = false;
+        this.mic.sync();
+      }
     }
     feedback(this.deafened ? 'deafen' : 'undeafen');
     this.announce();
@@ -146,10 +174,15 @@ export class VoiceEngine extends Emitter<VoiceEvents> {
 
   async start(): Promise<void> {
     this.inRoom = true;
+    // Entra como estava: mudo e ensurdecido persistem entre chamadas (os
+    // botões ficam fixos no cartão da conta e valem fora de sala). Quem saiu
+    // pra falar entra falando; quem se mutou entra mudo — em qualquer call.
+    const wanted = settings();
+    this.deafened = wanted.soundOff;
     if (!this.mic.stream) {
       try {
         await this.mic.open();
-        this.mic.enabled = false; // entra sempre mudo; abrir o microfone é escolha
+        this.mic.enabled = !wanted.micMuted && !wanted.soundOff;
         this.mic.sync();
       } catch (err) {
         console.warn('[rtc] sem microfone:', (err as Error).message);
@@ -161,7 +194,7 @@ export class VoiceEngine extends Emitter<VoiceEvents> {
 
   stop(): void {
     this.inRoom = false;
-    this.deafened = false;
+    // `deafened` NÃO é zerado aqui de propósito: é preferência, não estado da sala.
     this.screen.dispose();
     this.mesh.close();
     this.mic.close();
