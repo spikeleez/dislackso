@@ -77,6 +77,7 @@ export function ChannelSidebar({ onOpenSettings }: ChannelSidebarProps) {
           <VoiceChannelRow
             key={channel.id}
             guildId={guild!.id}
+            ownerId={guild!.ownerId}
             channel={channel}
             occupants={presence[guild!.id]?.[channel.id] ?? []}
             active={room?.guildId === guild!.id && room.channelId === channel.id}

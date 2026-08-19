@@ -30,6 +30,10 @@ export interface ClientEvents {
 
   'channel:create': (p: { guildId: string; name: string; type: 'text' | 'voice' }, ack: Ack<{ guild: Guild }>) => void;
   'channel:delete': (p: { guildId: string; channelId: string }, ack: Ack<{ guild: Guild }>) => void;
+  /** Só o dono (ou o admin do app): remove um membro do servidor. */
+  'guild:kick': (p: { guildId: string; userId: string }, ack: Ack<{ ok: true }>) => void;
+  /** Só o dono (ou o admin do app): manda alguém para outra sala de voz. */
+  'voice:move': (p: { guildId: string; channelId: string; userId: string }, ack: Ack<{ ok: true }>) => void;
 
   'voice:join': (p: { guildId: string; channelId: string }, ack: Ack<{ peers: PeerInfo[] }>) => void;
   'voice:leave': (p: Record<string, never>, ack: Ack<{ ok: true }>) => void;
@@ -48,6 +52,10 @@ export interface ClientEvents {
 export interface ServerEvents {
   'guild:update': (guild: Guild) => void;
   'guild:deleted': (p: { guildId: string }) => void;
+  /** Você foi expulso deste servidor pelo dono. */
+  'guild:kicked': (p: { guildId: string }) => void;
+  /** O dono te mandou para outra sala de voz — o cliente refaz o join. */
+  'voice:moved': (p: { guildId: string; channelId: string }) => void;
   'guild:online': (p: { guildId: string; online: string[] }) => void;
   'user:update': (user: PublicUser) => void;
   'presence:update': (p: { guildId: string; presence: Presence }) => void;

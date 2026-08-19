@@ -32,8 +32,21 @@ export function GuildMenu({ guild, dialog, onDialog, children }: GuildMenuProps)
       icon: <Link2 size={16} />,
       onSelect: () => { setInvite(guild.invite); onDialog('invite'); },
     },
-    { id: 'newtext', label: 'Criar canal de texto', icon: <Hash size={16} />, onSelect: () => onDialog('newtext') },
-    { id: 'newvoice', label: 'Criar sala de voz', icon: <Plus size={16} />, onSelect: () => onDialog('newvoice') },
+    // Criar canal virou ação do dono (o servidor também barra; ver socket/guilds.js).
+    {
+      id: 'newtext',
+      label: 'Criar canal de texto',
+      icon: <Hash size={16} />,
+      disabled: !isOwner && !isAdmin,
+      onSelect: () => onDialog('newtext'),
+    },
+    {
+      id: 'newvoice',
+      label: 'Criar sala de voz',
+      icon: <Plus size={16} />,
+      disabled: !isOwner && !isAdmin,
+      onSelect: () => onDialog('newvoice'),
+    },
     {
       id: 'regen',
       label: 'Gerar novo convite',

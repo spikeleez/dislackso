@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { MicOff, Monitor, Star } from 'lucide-react';
+import { Crown, MicOff, Monitor, Star } from 'lucide-react';
 import { Glass } from '@/components/ui/Glass';
 import { Avatar } from '@/components/ui/Avatar';
 import { ProfileDialog } from '@/components/overlays/ProfileDialog';
@@ -80,7 +80,7 @@ export function MembersPanel() {
         {members.map((member) => {
           const inCall = inVoice.get(member.id);
           return (
-            <UserMenu key={member.id} user={member} sid={inCall?.sid}>
+            <UserMenu key={member.id} user={member} sid={inCall?.sid} guildId={guild?.id}>
               <button
                 type="button"
                 onClick={() => setProfile(member)}
@@ -91,9 +91,15 @@ export function MembersPanel() {
                 )}
               >
                 <Avatar user={member} size="sm" speaking={inCall?.state.speaking} />
-                <span className="min-w-0 flex-1 truncate text-[13px] text-text">
-                  {member.name}
-                  {member.id === meId && ' (você)'}
+                <span className="flex min-w-0 flex-1 items-center gap-1 truncate text-[13px] text-text">
+                  <span className="truncate">
+                    {member.name}
+                    {member.id === meId && ' (você)'}
+                  </span>
+                  {/* Coroa junto do nome; a estrela de amigo continua na ponta direita. */}
+                  {member.id === guild?.ownerId && (
+                    <Crown size={12} className="shrink-0 text-yellow" aria-label="Dono do servidor" />
+                  )}
                 </span>
                 {inCall?.state.screen && <Monitor size={12} className="shrink-0 text-green" />}
                 {inCall && !inCall.state.mic && <MicOff size={12} className="shrink-0 text-red" />}

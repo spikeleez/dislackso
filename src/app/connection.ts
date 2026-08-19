@@ -78,6 +78,18 @@ export function startConnection(): void {
     toast('Um servidor foi excluído pelo dono.');
   });
 
+  socket.on('guild:kicked', ({ guildId }) => {
+    const guild = useGuilds.getState().guilds.find((g) => g.id === guildId);
+    if (useRoom.getState().room?.guildId === guildId) void leaveVoice({ silent: true });
+    useGuilds.getState().remove(guildId);
+    toast(guild ? `Você foi removido de ${guild.name}.` : 'Você foi removido de um servidor.');
+  });
+
+  // O dono me mandou para outra sala. O join normal cuida de sair da atual.
+  socket.on('voice:moved', ({ guildId, channelId }) => {
+    void joinVoice(guildId, channelId).then(() => toast('O dono do servidor te moveu de sala.'));
+  });
+
   socket.on('guild:online', ({ guildId, online }) => useGuilds.getState().setOnline(guildId, online));
 
   socket.on('presence:update', ({ guildId, presence }) =>

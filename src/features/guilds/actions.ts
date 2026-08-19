@@ -80,6 +80,18 @@ export async function deleteChannel(guildId: string, channelId: string): Promise
   }
 }
 
+export async function kickMember(guildId: string, userId: string): Promise<void> {
+  // O servidor emite `guild:update` para a sala; a lista de membros de todo
+  // mundo (inclusive a minha) se atualiza por lá.
+  const res = await attempt(() => ask('guild:kick', { guildId, userId }));
+  if (res) toast('Membro removido do servidor.');
+}
+
+export async function moveMember(guildId: string, channelId: string, userId: string): Promise<void> {
+  const res = await attempt(() => ask('voice:move', { guildId, channelId, userId }));
+  if (res) toast('Membro movido de sala.');
+}
+
 export async function toggleFriend(userId: string, add: boolean): Promise<void> {
   const res = await attempt(() => ask(add ? 'friend:add' : 'friend:remove', { friendId: userId }));
   if (res) useSession.getState().setFriends(res.friends);

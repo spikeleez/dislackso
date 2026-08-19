@@ -126,9 +126,10 @@ function registerGuilds(socket, ctx) {
     presence.pushGuild(guildId);
   }));
 
+  // Criar canal era liberado pra qualquer membro; virou ação do dono junto
+  // com o resto da administração do servidor (excluir, convidar, expulsar).
   socket.on('channel:create', ({ guildId, name, type = 'voice' } = {}, cb) => guard(cb, () => {
-    const guild = requireGuild(guildId);
-    if (!guild.members.includes(session().userId)) throw new Error('sem acesso');
+    const guild = requireOwner(guildId, 'criar canais');
     if (guild.channels.length >= MAX_CHANNELS) throw new Error(`Limite de ${MAX_CHANNELS} canais.`);
     if (!['voice', 'text'].includes(type)) throw new Error('tipo de canal inválido');
 
@@ -154,6 +155,61 @@ function registerGuilds(socket, ctx) {
     cb({ guild: publicGuild(guild) });
     presence.pushGuild(guildId);
     presence.pushPresence(guildId);
+  }));
+
+  socket.on('guild:kick', ({ guildId, userId } = {}, cb) => guard(cb, () => {
+    const guild = requireOwner(guildId, 'expulsar membros');
+    if (!userId || !guild.members.includes(userId)) throw new Error('essa pessoa não é membro');
+    if (userId === guild.ownerId) throw new Error('O dono não pode ser expulso.');
+
+    guild.members = guild.members.filter((id) => id !== userId);
+    store.save();
+
+    // Derruba todas as sessões do expulso neste servidor: sai da sala de voz,
+    // sai da sala do socket e fica sabendo (clientes novos removem o servidor
+    // da lista na hora; os antigos só param de receber eventos até relogar).
+    const room = io.sockets.adapter.rooms.get(presence.guildRoom(guildId));
+    for (const sid of [...(room ?? [])]) {
+      const target = presence.sessions.get(sid);
+      if (!target || target.userId !== userId) continue;
+      const sock = io.sockets.sockets.get(sid);
+      if (!sock) continue;
+      if (target.room && target.room.startsWith(`voice:${guildId}/`)) presence.leaveVoice(sock);
+      sock.emit('guild:kicked', { guildId });
+      sock.leave(presence.guildRoom(guildId));
+    }
+
+    cb({ ok: true });
+    presence.pushGuild(guildId);
+    presence.pushPresence(guildId);
+    presence.pushOnline(guildId);
+  }));
+
+  /**
+   * Move alguém para outra sala de voz do mesmo servidor.
+   *
+   * O servidor não mexe nas salas do socket: ele só avisa o cliente movido
+   * (`voice:moved`), e é o cliente quem refaz o `voice:join` — assim o motor
+   * de mídia dele desmonta e remonta as conexões pelo caminho normal, em vez
+   * de descobrir que trocou de sala com as conexões antigas ainda de pé.
+   */
+  socket.on('voice:move', ({ guildId, channelId, userId } = {}, cb) => guard(cb, () => {
+    const guild = requireOwner(guildId, 'mover membros');
+    if (!guild.channels.some((c) => c.id === channelId && c.type !== 'text')) {
+      throw new Error('sala de voz inexistente');
+    }
+    if (!userId || !guild.members.includes(userId)) throw new Error('essa pessoa não é membro');
+
+    let delivered = 0;
+    for (const [sid, target] of presence.sessions) {
+      if (target.userId !== userId) continue;
+      if (!target.room || !target.room.startsWith(`voice:${guildId}/`)) continue;
+      if (target.room === presence.voiceRoom(guildId, channelId)) continue; // já está lá
+      io.to(sid).emit('voice:moved', { guildId, channelId });
+      delivered++;
+    }
+    if (!delivered) throw new Error('essa pessoa não está em uma sala de voz deste servidor');
+    cb({ ok: true });
   }));
 }
 
