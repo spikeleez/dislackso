@@ -24,20 +24,15 @@ git fetch upstream
 git rev-list --left-right --count upstream/master...master
 ```
 
-## O `master` do fork diverge de propósito
-
-O `master` deste fork carrega commits que **são só nossos** — `CLAUDE.md` e
-`docs/*.md` (documentação interna). Eles não devem chegar ao upstream.
-
-Consequência prática, e a coisa mais fácil de errar aqui: **branch de trabalho
-sai de `upstream/master`, nunca do `master` local.** Um branch tirado do
-`master` local levaria o commit de documentação junto para dentro do PR.
-
 ## Ciclo de uma contribuição
 
+O mantenedor aceita a documentação interna no upstream, então o branch de
+trabalho sai do `master` local (mantido em dia com `git merge
+upstream/master`):
+
 ```bash
-git fetch upstream
-git checkout -b feat/nome-curto upstream/master    # <- a partir do upstream
+git checkout master && git fetch upstream && git merge upstream/master
+git checkout -b feat/nome-curto
 
 # ... alterações ...
 npm run typecheck && npm run build      # portões obrigatórios
@@ -60,11 +55,7 @@ git log --oneline upstream/master..HEAD
 git diff --stat upstream/master...HEAD
 ```
 
-Para atualizar o `master` local sem perder nossos commits:
 
-```bash
-git fetch upstream && git checkout master && git merge upstream/master
-```
 
 Ao abrir o PR, `ci-build.yml` roda no upstream: builda Windows e Linux e anexa
 os instaladores na execução do Actions — dá para baixar e testar o build do PR
@@ -198,11 +189,10 @@ estão congelados (`'caneta'`, `'marcador'`, `'seta'`).
 | `README.md` | sim | usuários e quem for rodar |
 | `DEPLOY.md` | sim | quem publica o servidor |
 | `release_notes.md` | sim | notas por versão (o topo vira o corpo do Release) |
-| `docs/CONTRATO.md` | sim (upstream) | o protocolo congelado |
-| `CLAUDE.md`, `docs/*.md` (os demais) | sim, **só no fork** | uso interno |
+| `docs/CONTRATO.md` | sim | o protocolo congelado |
+| `CLAUDE.md`, `docs/*.md` (os demais) | sim | documentação interna (o upstream aceita) |
 
 O `.gitignore` tinha uma regra `*.md` que ignorava tudo — foi ela que obrigou
 `README.md`, `DEPLOY.md`, `release_notes.md` e `docs/CONTRATO.md` a entrarem
-com `git add -f`. A regra foi removida; a documentação interna agora é
-versionada normalmente, mas fica no `master` do fork e não sobe para o
-upstream (por isso o branch de trabalho sai de `upstream/master`).
+com `git add -f`. A regra foi removida; todo `.md` é versionado normalmente.
+Ao mudar comportamento, atualize o doc afetado no mesmo commit.

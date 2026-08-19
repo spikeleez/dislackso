@@ -11,7 +11,7 @@ sua tela.
 
 ## Download
 
-[**Baixar DiSlackso para Windows**](https://github.com/spikeleez/dislackso/releases/latest/download/DiSlackso-Setup-3.5.3.exe) | [Versão Portátil (.zip)](https://github.com/spikeleez/dislackso/releases/latest/download/DiSlackso-portable-3.5.3.zip) | [**Linux (.AppImage)**](https://github.com/spikeleez/dislackso/releases/latest/download/DiSlackso-3.5.3.AppImage) | [.rpm (Fedora e derivados)](https://github.com/spikeleez/dislackso/releases/latest/download/DiSlackso-3.5.3.rpm)
+[**Baixar a versão mais recente**](https://github.com/spikeleez/dislackso/releases/latest) — instalador Windows (`.exe`), versão portátil (`.zip`), Linux (`.AppImage` e `.rpm`).
 
 Você pode instalar o app no seu computador e se conectar diretamente aos servidores na nuvem com persistência de dados.
 
@@ -50,11 +50,12 @@ direto e entram com nickname e senha — o app já sabe pra qual servidor ir.
 **Instalador .exe**:
 
 ```bash
-npm run build
+npm run dist
 ```
 
-Gera `dist/DiSlackso-Setup-3.5.3.exe` (~79 MB). Instalador comum: escolhe pasta, cria atalho,
-desinstala pelo Painel de Controle.
+Gera `release/DiSlackso-Setup-<versão>.exe` (~79 MB). Instalador comum: escolhe pasta, cria
+atalho, desinstala pelo Painel de Controle. (O `npm run build` sozinho compila só a
+interface web em `dist/web` — quem empacota o app é o `dist`.)
 
 > **Sobre o erro "Cannot create symbolic link"**
 >
@@ -82,9 +83,9 @@ npm install
 npm run icon && electron-builder --linux --publish never
 ```
 
-Gera `dist/DiSlackso-3.5.3.AppImage` e `dist/DiSlackso-3.5.3.rpm`. O `.rpm` instala nativo
+Gera `release/DiSlackso-<versão>.AppImage` e `release/DiSlackso-<versão>.rpm`. O `.rpm` instala nativo
 via `dnf`; o `.AppImage` roda sem instalar (`chmod +x` e executa — se faltar o FUSE2,
-`sudo dnf install fuse fuse-libs`). O `npm run build` normal não serve aqui porque o
+`sudo dnf install fuse fuse-libs`). O `npm run dist` normal não serve aqui porque o
 `scripts/prep-build.js` que ele chama é só para o cache do Windows (ele detecta a plataforma
 e não faz nada em Linux, mas é mais simples ir direto no `electron-builder`).
 
@@ -115,18 +116,21 @@ menor que o instalador inteiro.
 > empacotador grava um marcador `resources/PORTABLE` e o app detecta, avisa e leva até a
 > página de releases.
 
-**Para publicar uma versão nova:**
+**Para publicar uma versão nova**, o caminho normal é deixar o CI trabalhar:
 
 ```bash
-npm version minor && npm run build && npm run portable
+npm version minor && git push --follow-tags
+gh release create vX.Y.Z --title "..." --notes "..."
 ```
 
-Depois suba o release com os arquivos que o atualizador precisa — do Windows e, se você
-também gerou os pacotes Linux (seção acima), inclua `latest-linux.yml` e o `.AppImage`
-junto:
+A tag `v*` dispara `.github/workflows/build-release.yml`, que builda Windows e Linux em
+paralelo e sobe instaladores, `.blockmap`, `latest.yml`/`latest-linux.yml` e o `.zip`
+portátil direto no Release — e, no fim, avisa quem está com o app aberto que há versão
+nova. Se precisar fazer na mão, os artefatos locais saem em `release/`
+(`npm run dist`) e `dist/DiSlackso-portable/` (`npm run portable`):
 
 ```bash
-gh release create v3.2.0 dist/DiSlackso-Setup-*.exe dist/*.blockmap dist/latest.yml dist/DiSlackso-portable-*.zip dist/*.AppImage dist/*.rpm dist/latest-linux.yml --title "..." --notes "..."
+gh release create vX.Y.Z release/DiSlackso-Setup-*.exe release/*.blockmap release/latest.yml release/*.AppImage release/*.rpm release/latest-linux.yml --title "..." --notes "..."
 ```
 
 O `latest.yml` (Windows) e o `latest-linux.yml` (Linux) são obrigatórios: são os manifestos

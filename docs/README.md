@@ -28,7 +28,7 @@ O diferencial técnico é o compartilhamento de tela: VP9, bitrate explícito,
 
 - `npm run typecheck` → limpo.
 - `npm run build` → limpo, ~4s, bundle 638 kB (202 kB gzip).
-- Fork sem atraso em relação ao upstream; à frente apenas pelo commit desta
-  documentação interna, que **não** sobe para o upstream — por isso todo branch
-  de trabalho sai de `upstream/master` (ver [FLUXO-E-CONVENCOES.md](FLUXO-E-CONVENCOES.md)).
-- 45 commits herdados do upstream; autores: `spikeleez` (40) e `Ricardo Fuly` (5).
+- Fork em dia com o upstream; a documentação interna é versionada e pode ir
+  nos PRs (o mantenedor aceita). Fluxo em [FLUXO-E-CONVENCOES.md](FLUXO-E-CONVENCOES.md).
+- Base herdada do upstream: 45 commits, autores `spikeleez` (40) e
+  `Ricardo Fuly` (5).

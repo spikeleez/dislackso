@@ -30,15 +30,13 @@ Este repositório é um **fork**:
 | upstream (destino dos PRs) | `https://github.com/spikeleez/dislackso.git` |
 | branch principal | `master` (nos dois) |
 
-**O trabalho vira PR para `spikeleez/dislackso`.**
-
-> ⚠️ **Branch de trabalho sai de `upstream/master`, não do `master` local.**
-> O `master` deste fork carrega commits que são só nossos (`CLAUDE.md`,
-> `docs/*`). Um branch tirado dele levaria esses commits junto para o PR.
+**O trabalho vira PR para `spikeleez/dislackso`.** O mantenedor aceita
+receber a documentação interna (`CLAUDE.md`, `docs/*`) no upstream, então
+branch de trabalho pode sair do `master` local normalmente:
 
 ```bash
-git fetch upstream
-git checkout -b feat/nome-curto upstream/master   # <- a partir do upstream
+git checkout master && git fetch upstream && git merge upstream/master
+git checkout -b feat/nome-curto
 # ... alterações ...
 npm run typecheck && npm run build
 git commit
@@ -46,11 +44,8 @@ git push -u origin feat/nome-curto
 gh pr create --repo spikeleez/dislackso --base master --head tornellihenrique:feat/nome-curto
 ```
 
-Manter o `master` local em dia com o upstream (sem perder nossos commits):
-
-```bash
-git fetch upstream && git checkout master && git merge upstream/master
-```
+Antes de abrir o PR, confira o que vai nele:
+`git log --oneline upstream/master..HEAD`.
 
 Nunca commite direto em `master` sem o usuário pedir. Nunca faça push nem abra
 PR sem confirmação — PR é ação externa e irreversível na prática.
@@ -142,19 +137,16 @@ scripts/          cert, ícones, empacotamento portátil, prep do winCodeSign
   espelho no Supabase todo redeploy zera os dados.
 - `desktop/main.js` — 616 linhas, o maior arquivo do projeto (exceção
   consciente à regra das 200).
-- `docs/CONTRATO.md` está **desatualizado** em relação ao código de 4.0.3.
-  As divergências estão listadas em [`docs/SERVIDOR-E-DADOS.md`](docs/SERVIDOR-E-DADOS.md#o-contrato-está-desatualizado).
-- `README.md` também tem trechos velhos (links de download 3.5.3, caminho do
-  instalador em `dist/` quando hoje é `release/`, `npm run build` descrito
-  como se gerasse o `.exe`).
+- `docs/CONTRATO.md` e `README.md` foram atualizados na rodada de agosto/2026
+  e refletem o código. Ao mexer no protocolo, atualize o CONTRATO junto —
+  evento novo pode; renomear/mudar forma de existente, não.
 
 ## Nota sobre estes arquivos
 
-`CLAUDE.md` e `docs/*.md` são **versionados no fork**. A regra `*.md` que os
-ignorava foi removida do `.gitignore` — foi ela, aliás, que obrigou
-`README.md`, `DEPLOY.md`, `release_notes.md` e `docs/CONTRATO.md` a entrarem
-com `git add -f`.
+`CLAUDE.md` e `docs/*.md` são versionados e podem ir para o upstream (o
+mantenedor topou). A regra `*.md` que os ignorava foi removida do
+`.gitignore` — era ela que obrigava `README.md`, `DEPLOY.md`,
+`release_notes.md` e `docs/CONTRATO.md` a entrarem com `git add -f`.
 
-Eles vivem só no `master` deste fork e **não devem chegar ao upstream**. É por
-isso que branch de trabalho sai de `upstream/master` — ver a seção de Fork e
-Pull Requests acima.
+Ao mudar comportamento do app, atualize os docs afetados no MESMO commit —
+eles só valem enquanto refletem o código.

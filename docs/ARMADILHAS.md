@@ -38,6 +38,13 @@ exatamente para diagnosticar isso.
 os primeiros a entrar verem o banco vazio — e o primeiro `save()` sobrescrever
 o estado remoto com esse vazio.
 
+**O espelho Supabase tem duas travas que não saem dali** (`supabase.js`): não
+grava sem antes ter LIDO o remoto, e não grava um banco sem usuários por cima
+de um estado que já teve usuários. Elas existem porque um `load()` falhado num
+redeploy + um `save()` do banco vazio já apagou as contas de todo mundo.
+`restore()` insiste com backoff e, desistindo, segue tentando em background
+(reconciliação por união de chaves uuid). Há flush síncrono no SIGTERM.
+
 **Escrita é tmp + rename.** Escrever direto no `db.json` deixaria JSON truncado
 numa queda no meio, ou seja, tudo perdido.
 
@@ -65,6 +72,25 @@ desliga o modo caneta no instante seguinte a ele ser ligado.
 **A troca entre `Gate` e `Shell` é remoção direta, sem `AnimatePresence`.** Se
 a animação de saída do Gate não completa, ele fica preso por cima — visível,
 cobrindo o app e engolindo todo clique.
+
+**`PeerAudio` mora no `Stage`, nunca dentro do `VoiceStage`.** Abrir um canal
+de texto por cima da sala desmonta o VoiceStage — e desmontar o PeerAudio
+remove os `<audio>` do DOM: você para de ouvir todo mundo enquanto todos
+continuam te ouvindo. O áudio só pode depender de "estou na sala".
+
+**O stream do `<video>` do Tile é ligado por callback ref, não por efeito.**
+Entrar/sair da tela cheia troca a árvore (portal ↔ inline): o React recria o
+elemento sem remontar o componente, e um `useEffect` com deps `[stream, …]`
+não roda de novo — o vídeo novo nasceria preto. Foi o bug da tela cheia preta.
+
+**O Tile precisa de `size-full`, e cada célula da fita é `grid`.** Num flex, o
+tile colapsava para a altura do conteúdo — o "amassado com espaço sobrando" da
+fita de participantes.
+
+**Nunca misture o atalho `background` com `backgroundImage` num style de
+React.** Limpar o atalho (`style.background = ''`) reseta todas as
+sub-propriedades, inclusive o `backgroundImage` definido na mesma atualização
+— era o avatar/banner invisível na tela de conta. Use `backgroundColor`.
 
 **`overflow-hidden` só no container mais externo do `VoiceStage`.** Repetir
 nos internos corta o topo dos avatares numa grade baixa.
@@ -121,7 +147,10 @@ programa.
 **Trocar de microfone é `replaceTrack`, não renegociação.** Renegociar com a
 sala inteira derruba a conexão de todo mundo por um instante.
 
-**Entrar na sala abre o microfone sempre mudo.** Falar é escolha explícita.
+**Mudo e ensurdecido são preferências persistentes** (`micMuted`/`soundOff` em
+`stores/settings`). Entrar numa sala respeita como eles estavam; `voice.stop()`
+não zera mais o `deafened`. Os botões na CallBar valem fora de chamada — lá
+eles ajustam a preferência salva, e o motor a adota no próximo `start()`.
 
 **RNNoise e `noiseSuppression` nativo não convivem** — quando um está ligado, o
 outro é desligado em `MicGraph.open()`.
@@ -196,12 +225,17 @@ middleware o preflight morre e uploads falham em silêncio.
 **Histórico é limitado a 200 no disco / 100 na resposta.** O banco inteiro é
 carregado na memória a cada boot.
 
+**Criar canal é ação do dono desde esta rodada** (era de qualquer membro até a
+4.0.3). `guild:kick` e `voice:move` também são só-dono/admin; o `voice:move`
+não mexe nas salas do socket — avisa o cliente (`voice:moved`) e ele refaz o
+join, para a malha de mídia desmontar pelo caminho normal.
+
+**Imagens são reduzidas no cliente antes do upload** (`shrinkImage` em
+`features/profile/actions.ts`; GIF passa direto). Elas moram dentro do banco e
+o banco inteiro é espelhado a cada save — sem o shrink, o payload do espelho
+crescia até o Supabase recusar.
+
 ## Documentação
 
-**`docs/CONTRATO.md` está desatualizado** em relação a 4.0.3 — confie no
-código. Divergências listadas em
-[SERVIDOR-E-DADOS.md](SERVIDOR-E-DADOS.md#o-contrato-está-desatualizado).
-
-**`README.md` tem trechos velhos**: links de download apontando para 3.5.3,
-instalador descrito em `dist/` quando `directories.output` é `release/`, e
-`npm run build` apresentado como se gerasse o `.exe` (hoje é `npm run dist`).
+`docs/CONTRATO.md` e `README.md` foram atualizados nesta rodada e refletem o
+código — se divergirem de novo, o código manda.

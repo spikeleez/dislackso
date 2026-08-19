@@ -174,7 +174,10 @@ Detalhes:
   o anel verde piscava sem parar.
 - Se o aparelho escolhido sumiu (headset USB removido), `open()` limpa
   `micId` e tenta de novo com o padrão do sistema.
-- Entrar na sala abre o microfone **sempre mudo**: falar é escolha.
+- Entrar na sala respeita as preferências persistentes `micMuted`/`soundOff`
+  (ver `stores/settings`): quem saiu pra falar entra falando, quem se mutou
+  entra mudo. `toggleMic`/`toggleDeafen` funcionam fora de sala (ajustam só a
+  preferência) e gravam a escolha quando em sala.
 - Quando `rnnoise` está ligado, `noiseSuppression` nativo é desligado (os dois
   juntos brigam).
 

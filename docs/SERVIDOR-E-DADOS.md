@@ -122,12 +122,19 @@ com o mesmo usuário, ele continua online.
 | Ação | Quem pode |
 |---|---|
 | `guild:create`, `guild:join` | qualquer autenticado |
-| `guild:update`, `guild:delete`, `guild:regenInvite`, `channel:delete` | **dono** ou admin do app |
-| `channel:create` | **qualquer membro** do servidor |
+| `guild:update`, `guild:delete`, `guild:regenInvite` | **dono** ou admin do app |
+| `channel:create`, `channel:delete` | **dono** ou admin do app |
+| `guild:kick` (expulsar membro) | **dono** ou admin do app; o dono não pode ser expulso |
+| `voice:move` (mover de sala de voz) | **dono** ou admin do app |
 | `guild:leave` | qualquer membro, **menos o dono** (ele tem de excluir) |
 
-A assimetria em `channel:create` vs `channel:delete` é intencional. Limite:
+(`channel:create` era liberado a qualquer membro até a 4.0.3.) Limite:
 `MAX_CHANNELS = 40`.
+
+`guild:kick` remove o membro, derruba as sessões dele no servidor (sala de voz
+inclusive) e emite `guild:kicked` para os sockets dele. `voice:move` só emite
+`voice:moved` para o alvo — é o cliente quem refaz o `voice:join`, para o
+motor de mídia desmontar e remontar as conexões pelo caminho normal.
 
 Convites: 8 caracteres do alfabeto `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` — **sem
 I, O, 0 e 1**, para ditar por voz sem erro. O código **é** a credencial daquele
@@ -206,23 +213,13 @@ funcionam em contexto seguro fora de `localhost`.
 
 ---
 
-## O contrato está desatualizado
+## O contrato
 
-[`docs/CONTRATO.md`](CONTRATO.md) é versionado e veio do upstream, mas o
-código de 4.0.3 já divergiu. **Confie no código, não no documento.**
-Divergências conhecidas:
-
-| Onde | O contrato diz | O código faz |
-|---|---|---|
-| §1 banco | só `users`, `guilds`, `usernames` | também `adminUserId` e `images` |
-| §2 sessão | `{ user, guilds, iceServers, sid, token, friends }` | + `isAdmin` |
-| §2 servidor→cliente | termina em `admin:message` | + `app:update` |
-| §3 HTTP | `/api/health`, `/api/upload`, `/api/admin/broadcast`, `/uploads/*` | + `GET /api/image/:id`, `POST /api/admin/admin-user`, `POST /api/admin/notify-update` |
-| §3 upload | devolve `/uploads/<hex>.<ext>` | devolve `/api/image/<uuid>` |
-| §5 ponte desktop | lista sem `toggleFullscreen` | tem `toggleFullscreen` |
-
-Corrigir esse documento é um bom PR pequeno para o upstream — só documentação,
-sem risco de regressão.
+[`docs/CONTRATO.md`](CONTRATO.md) foi atualizado nesta rodada e reflete o
+código (banco com `adminUserId`/`images`, sessão com `isAdmin`, rotas de
+imagem e admin, eventos `guild:kick`/`voice:move`/`guild:kicked`/`voice:moved`
+e `app:update`, `toggleFullscreen` na ponte). Se divergirem de novo, o código
+manda.
 
 ## O que continua congelado (não mexa)
 
