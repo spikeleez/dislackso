@@ -7,6 +7,7 @@ import { useGuilds } from '@/stores/guilds';
 import { useRoom } from '@/stores/room';
 import { useSession } from '@/stores/session';
 import { voice } from '@/lib/rtc/engine';
+import { PeerAudio } from './PeerAudio';
 import { ShareHud } from './ShareHud';
 import { VoiceStage } from './VoiceStage';
 
@@ -42,6 +43,15 @@ export function Stage({ membersOpen, onToggleMembers }: StageProps) {
 
   return (
     <main className="relative flex min-w-0 flex-1 flex-col gap-1.5">
+      {/*
+        AQUI, e não dentro de VoiceStage: abrir um canal de texto por cima da
+        sala desmonta o VoiceStage inteiro — e desmontar o PeerAudio remove os
+        <audio> do DOM, ou seja, você para de ouvir todo mundo (enquanto todos
+        continuam te ouvindo). O áudio só pode depender de "estou na sala",
+        nunca de qual tela está visível.
+      */}
+      {room && <PeerAudio />}
+
       <Glass variant="panel" className="flex h-12 shrink-0 items-center gap-3 px-4">
         <span className="truncate text-sm font-semibold text-bright">{title}</span>
         <span className="flex-1 truncate text-[12px] text-dim">

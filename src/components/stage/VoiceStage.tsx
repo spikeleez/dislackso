@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '@/lib/cn';
 import { useRoom } from '@/stores/room';
-import { PeerAudio } from './PeerAudio';
 import { Tile } from './Tile';
 import { resolveFocus, useStageEntries } from './useStageEntries';
 
@@ -33,8 +32,6 @@ export function VoiceStage() {
     // também corta conteúdo que só está *apertado*, não escapando de verdade
     // — foi o que cortava o topo dos avatares numa grade baixa.
     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2">
-      <PeerAudio />
-
       {focused ? (
         <>
           {/*
@@ -52,21 +49,37 @@ export function VoiceStage() {
           </div>
 
           {strip.length > 0 && (
-            <div className="flex h-28 shrink-0 gap-2 overflow-x-auto">
-              <AnimatePresence initial={false}>
-                {strip.map((entry) => (
-                  <div key={entry.id} className="aspect-video h-full shrink-0">
-                    <Tile
-                      entry={entry}
-                      focused={false}
-                      compact
-                      fullscreen={entry.id === fullscreenId}
-                      clickable
-                      onClick={() => focus(entry.id)}
-                    />
-                  </div>
-                ))}
-              </AnimatePresence>
+            /*
+              Três decisões deliberadas nesta fita:
+              - a altura externa (h-30) é maior que a das células (h-26) de
+                propósito: é o orçamento da barra de rolagem horizontal. Sem
+                ele, a barra aparecia POR CIMA dos tiles, roubava altura e
+                forçava um scroll vertical que não deveria existir;
+              - `w-max` + `mx-auto` no miolo: com poucos participantes a fita
+                fica centralizada sob o destaque; com muitos ela cresce além
+                da largura e o scroll horizontal assume — centralizar direto
+                no container rolável cortaria o começo da lista;
+              - cada célula é `grid`, não `div`: célula de grid estica o Tile
+                para ocupar os 16:9 inteiros. Num bloco comum ele colapsava
+                para a altura do conteúdo — o "amassado com espaço sobrando".
+            */
+            <div className="h-30 shrink-0 overflow-x-auto overflow-y-hidden">
+              <div className="mx-auto flex h-26 w-max gap-2">
+                <AnimatePresence initial={false}>
+                  {strip.map((entry) => (
+                    <div key={entry.id} className="grid aspect-video h-full shrink-0">
+                      <Tile
+                        entry={entry}
+                        focused={false}
+                        compact
+                        fullscreen={entry.id === fullscreenId}
+                        clickable
+                        onClick={() => focus(entry.id)}
+                      />
+                    </div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
           )}
         </>

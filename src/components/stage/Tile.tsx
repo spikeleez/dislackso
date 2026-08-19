@@ -48,6 +48,29 @@ export function Tile({ entry, focused, fullscreen, compact, clickable, onClick }
   const pending = !entry.isLocal && entry.intendsScreen && !entry.sharing && !watching;
   const showVideo = entry.sharing && Boolean(entry.stream);
 
+  /**
+   * Callback ref, e não um useEffect, de propósito. Entrar/sair da tela cheia
+   * troca a árvore de DOM (portal ↔ inline): o React descarta o <video> velho
+   * e cria um novo, mas o componente NÃO remonta — um efeito com deps
+   * [stream, ...] não roda de novo, e o vídeo novo nascia sem srcObject.
+   * Era exatamente o bug da "tela cheia preta" que só voltava no modo grade
+   * (onde a posição na árvore muda e o componente remonta de verdade).
+   * O callback ref roda sempre que o elemento em si troca — é o gancho certo.
+   */
+  const attachVideo = useCallback(
+    (node: HTMLVideoElement | null) => {
+      videoRef.current = node;
+      if (!node || !showVideo || !entry.stream) return;
+      if (node.srcObject !== entry.stream) {
+        node.srcObject = entry.stream;
+        node.muted = entry.isLocal; // nunca tocar o próprio áudio: vira eco
+        node.play().catch(() => setNeedsGesture(true));
+      }
+    },
+    [showVideo, entry.stream, entry.isLocal],
+  );
+
+  // O caso complementar: o stream muda (ou some) com o MESMO elemento no lugar.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -59,7 +82,7 @@ export function Tile({ entry, focused, fullscreen, compact, clickable, onClick }
     if (video.srcObject === entry.stream) return;
 
     video.srcObject = entry.stream;
-    video.muted = entry.isLocal; // nunca tocar o próprio áudio: vira eco
+    video.muted = entry.isLocal;
     video.play().catch(() => setNeedsGesture(true));
   }, [showVideo, entry.stream, entry.isLocal]);
 
@@ -94,14 +117,20 @@ export function Tile({ entry, focused, fullscreen, compact, clickable, onClick }
   const tile = (
     <motion.div
       ref={rootRef}
-      layout
+      // FLIP de layout + reparenting (portal da tela cheia) não convivem: o
+      // Motion mede a posição na árvore antiga e aplica um transform que não
+      // vale na nova. Em tela cheia a animação de layout fica desligada.
+      layout={!fullscreen}
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ type: 'spring', stiffness: 320, damping: 34 }}
       onClick={clickable ? onClick : undefined}
       className={cn(
-        'group relative flex min-h-0 items-center justify-center overflow-hidden',
+        // `size-full` importa: dentro de célula de grid ele é redundante, mas
+        // na fita de participantes (flex) o tile colapsava para a altura do
+        // conteúdo — vídeo espremido no topo e um vão sobrando embaixo.
+        'group relative flex min-h-0 size-full items-center justify-center overflow-hidden',
         fullscreen
           ? 'fixed inset-0 z-70 rounded-none bg-black'
           : 'rounded-[var(--radius-lg)] bg-tile ring-1 ring-line transition-shadow duration-(--duration-med)',
@@ -111,7 +140,7 @@ export function Tile({ entry, focused, fullscreen, compact, clickable, onClick }
       )}
     >
       <video
-        ref={videoRef}
+        ref={attachVideo}
         autoPlay
         playsInline
         className={cn('size-full object-contain', !showVideo && 'hidden')}
